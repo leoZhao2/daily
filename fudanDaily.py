@@ -101,7 +101,7 @@ def notify(_title, _message=None):
     print(_title)
     print(_message)
 
-    _response = requests.post(f"https://sc.ftqq.com/{PUSH_KEY}.send", {"text": _title, "desp": _message})
+    _response = requests.post(f"https://sctapi.ftqq.com/{PUSH_KEY}.send", {"text": _title, "desp": _message})
 
     if _response.status_code == 200:
         print(f"发送通知状态：{_response.content.decode('utf-8')}")

@@ -1,21 +1,27 @@
 import os
 import sys
-import json
-import time
 import hashlib
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
+import json
+import time
+import easyocr
+import io
+import numpy
+from PIL import Image
+from requests import session
 
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
 PUSH_KEY = os.getenv("PUSH_KEY")
 
 fudan_daily_url = "https://zlapp.fudan.edu.cn/site/ncov/fudanDaily"
-login_url = "https://uis.fudan.edu.cn/authserver/login?service=https%3A%2F%2Fzlapp.fudan.edu.cn%2Fa_fudanzlapp%2Fapi%2Fsso%2Findex%3Fredirect%3Dhttps%253A%252F%252Fzlapp.fudan.edu.cn%252Fsite%252Fncov%252FfudanDaily%26from%3Dwap"
+login_url = "https://uis.fudan.edu.cn/authserver/login"
 get_info_url = "https://zlapp.fudan.edu.cn/ncov/wap/fudan/get-info"
 save_log_url = "https://zlapp.fudan.edu.cn/wap/log/save-log"
 save_url = "https://zlapp.fudan.edu.cn/ncov/wap/fudan/save"
+url_code = "https://zlapp.fudan.edu.cn/backend/default/code"
 
 
 def get_session(_login_info):
@@ -39,11 +45,28 @@ def get_historical_info(_session):
     response = session.get(get_info_url)
     return json.loads(response.text)["d"]
 
+def getCode(session):
+    while 1:
+        code = validate_code(session)
+        if len(code) == 4 and code.isalpha():
+                return code
+        time.sleep(0.5)
 
 def get_today_date():
     _tz = timezone(+timedelta(hours=8))
     return datetime.now(_tz).strftime("%Y%m%d")
 
+def validate_code(_session):
+    img = _session.get(url_code).content
+    return read_captcha(img)
+
+def read_captcha(img_byte):
+    image = numpy.array(Image.open(io.BytesIO(img_byte)))
+    reader = easyocr.Reader(['en'])
+    result = reader.readtext(image, detail=0)
+    code = result[0]
+    code.replace(" ","")
+    return code
 
 def save_log(_session):
     _data = {
@@ -55,7 +78,7 @@ def save_log(_session):
     _session.post(save_log_url, data=_data)
 
 
-def get_payload(_historical_info):
+def get_payload(_historical_info,code):
     _payload = _historical_info["info"]
     if "jrdqjcqk" in _payload:
         _payload.pop("jrdqjcqk")
@@ -67,7 +90,10 @@ def get_payload(_historical_info):
         "number": _historical_info["uinfo"]["role"]["number"],
         "realname": _historical_info["uinfo"]["realname"],
         "sfhbtl": 0,
-        "sfjcgrq": 0
+        "sfjcgrq": 0,
+        "sfzx": "1",  # 是否在校
+        "fxyy": "",  # 返校原因
+        "code": code
     })
 
     if not _payload["area"]:
@@ -123,8 +149,8 @@ if __name__ == "__main__":
         session = get_session(login_info)
         historical_info = get_historical_info(session)
         save_log(session)
-
-        payload = get_payload(historical_info)
+        code = getCode(session)
+        payload = get_payload(historical_info,code)
         payload_str = get_payload_str(payload)
         # print(payload_str)
 

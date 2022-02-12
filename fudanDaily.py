@@ -62,7 +62,7 @@ def validate_code(_session):
 def read_captcha(img_byte):
     import ddddocr
     ocr = ddddocr.DdddOcr()
-    res = ocr.classification(Image.open(io.BytesIO(img_byte)))
+    res = ocr.classification(Image.open(io.BytesIO(img_byte)).read())
     return res
 
 def save_log(_session):

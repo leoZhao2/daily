@@ -61,12 +61,10 @@ def validate_code(_session):
     return read_captcha(img)
 
 def read_captcha(img_byte):
-    image = numpy.array(Image.open(io.BytesIO(img_byte)))
-    reader = easyocr.Reader(['en'])
-    result = reader.readtext(image, detail=0)
-    code = result[0]
-    code.replace(" ","")
-    return code
+    import ddddocr
+    ocr = ddddocr.DdddOcr()
+    res = ocr.classification(Image.open(io.BytesIO(img_byte)))
+    return res
 
 def save_log(_session):
     _data = {

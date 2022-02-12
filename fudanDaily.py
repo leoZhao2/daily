@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 import json
 import time
-import easyocr
 import io
 import numpy
 from PIL import Image
